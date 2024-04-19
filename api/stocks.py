@@ -3,7 +3,7 @@ from flask import Blueprint, request, jsonify, current_app, Response
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_restful import Api, Resource # used for REST API building
 from datetime import datetime
-from auth_middleware import token_required
+#from auth_middleware import token_required
 from model.users import User, Stocks, Stock_Transactions
 from sqlalchemy import func, case, select
 #from auth_middleware1 import token_required1
@@ -13,7 +13,8 @@ import requests
 import matplotlib.pyplot as plt
 from io import BytesIO
 import base64
-
+import plotly.graph_objects as go
+import numpy as np
 
 
 
@@ -649,6 +650,7 @@ class StocksAPI(Resource):
             for transaction in user_transactions:
                 if transaction._transaction_type == 'buy':
                     user_money_over_transactions.append(user_money_over_transactions[-1] - transaction._transaction_amount)
+                    
                 elif transaction._transaction_type == 'sell':
                     user_money_over_transactions.append(user_money_over_transactions[-1] + transaction._transaction_amount)
 
@@ -679,8 +681,40 @@ class StocksAPI(Resource):
         def post(self):
             body = request.get_json()
             uid = body.get("uid")
-            symbol = body.get('symbol')
-            quantity = body.get('quantity')
+            listdata = [[0,10000]]
+            transaction = Stock_Transactions.query.filter_by(_uid=uid).all()
+            #sortedtransactio = transaction[0]
+            #print("this is transactionx:"+str(sortedtransactio.uid))
+            #print("this is transactiony:"+str(sortedtransactio.transaction_type))
+            x = 1
+            totalamount = 10000
+            for i in transaction:
+                y=i.id-1
+                print("this is y:" + str(y))
+                transactionamount = transaction[y]
+                transactionmoney = transactionamount.transaction_amount
+
+                print("this is transactiamount" + str(transactionmoney))
+                if str(transactionamount.transaction_type) == "buy":
+                    print("this is transaction type:"+str(transactionamount.transaction_type))
+                    totalamount = totalamount - transactionmoney
+                    print("this is totalamount:" + str(totalamount))
+                    list1 = [x,totalamount]
+                    listdata.append(list1)
+                if str(transactionamount.transaction_type) == "sell":
+                    totalamount = totalamount + transactionmoney
+                    print("this is transaction type:"+str(transactionamount.transaction_type))
+                    print("this is totalamount:" + str(totalamount))
+                    list1 = [x,totalamount]
+                    listdata.append(list1)
+                x += 1
+                print(listdata)
+            data = jsonify(listdata)
+            return data
+                
+                
+           
+            
             
             
         
