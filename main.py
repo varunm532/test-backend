@@ -15,11 +15,13 @@ from __init__ import app, db, cors  # Definitions initialization
 from api.user import user_api # Blueprint import api definition
 from api.player import player_api
 from api.stocks import stocks_api
+from api.stocksort import stocks_sort
 
 
 # database migrations
 from model.users import initUsers
 from model.players import initPlayers
+from model.stockfilter import initstock
 # setup App pages
 from projects.projects import app_projects # Blueprint directory import projects definition
 
@@ -37,6 +39,8 @@ app.register_blueprint(user_api) # register api routes
 app.register_blueprint(player_api)
 app.register_blueprint(app_projects) # register app pages
 app.register_blueprint(stocks_api)
+app.register_blueprint(stocks_sort)
+
 
 
 @app.errorhandler(404)  # catch for URL not found
@@ -130,7 +134,7 @@ def display():
 def before_request():
     # Check if the request came from a specific origin
     allowed_origin = request.headers.get('Origin')
-    if allowed_origin in ['http://localhost:4100', 'http://localhost:8086', 'https://tdwolff.github.io',]:
+    if allowed_origin in ['http://localhost:4100', 'http://localhost:8086','http://127.0.0.1:4100', 'http://127.0.0.1:8476', 'https://tdwolff.github.io',]:
         cors._origins = allowed_origin
 
 @app.after_request
@@ -148,6 +152,8 @@ custom_cli = AppGroup('custom', help='Custom commands')
 def generate_data():
     initUsers()
     initPlayers()
+    initstock()
+
 
 
 
