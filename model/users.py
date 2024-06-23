@@ -685,6 +685,19 @@ class User(db.Model):
         db.session.delete(self)
         db.session.commit()
         return None
+def NewTransactractionlog(body,transactionamount):
+    quantitytobuy = body.get('buyquantity')
+    uid = body.get('uid')
+    symbol = body.get('symbol')
+    newquantity = body.get('newquantity')
+    transactiontype= 'buy'
+    Inst_table = Stock_Transactions(uid=uid, symbol=symbol,transaction_type=transactiontype, quantity=quantitytobuy, transaction_amount=transactionamount)
+    print(Inst_table)
+    Inst_table.create()   
+    db.session.commit()
+    return print("transaction logged")
+    
+    
 
 
 """Database Creation and Testing """

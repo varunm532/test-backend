@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_restful import Api, Resource # used for REST API building
 from datetime import datetime
 #from auth_middleware import token_required
-from model.users import User, Stocks, Stock_Transactions
+from model.users import User, Stocks, Stock_Transactions, NewTransactractionlog
 from sqlalchemy import func, case, select
 #from auth_middleware1 import token_required1
 import sqlite3
@@ -176,10 +176,7 @@ class StocksAPI(Resource):
                 ## creates log for transaction
                 transactionamount = (currentstockmoney*quantitytobuy)
                 db.session.commit()
-                Inst_table = Stock_Transactions(uid=uid, symbol=symbol,transaction_type=transactiontype, quantity=quantitytobuy, transaction_amount=transactionamount)
-                print(Inst_table)
-                Inst_table.create()   
-                db.session.commit()
+                NewTransactractionlog(body,transactionamount)
 
             else:
                 return jsonify({'error': 'Insufficient funds'}), 400
