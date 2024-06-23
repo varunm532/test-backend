@@ -685,17 +685,31 @@ class User(db.Model):
         db.session.delete(self)
         db.session.commit()
         return None
-def NewTransactractionlog(body,transactionamount):
+def NewTransactractionlog(body,transactionamount,isbuy):
     quantitytobuy = body.get('buyquantity')
     uid = body.get('uid')
     symbol = body.get('symbol')
-    newquantity = body.get('newquantity')
-    transactiontype= 'buy'
-    Inst_table = Stock_Transactions(uid=uid, symbol=symbol,transaction_type=transactiontype, quantity=quantitytobuy, transaction_amount=transactionamount)
-    print(Inst_table)
-    Inst_table.create()   
-    db.session.commit()
-    return print("transaction logged")
+    if isbuy == True:
+        transactiontype= 'buy'
+        Inst_table = Stock_Transactions(uid=uid, symbol=symbol,transaction_type=transactiontype, quantity=quantitytobuy, transaction_amount=transactionamount)
+        print(Inst_table)
+        Inst_table.create()   
+        db.session.commit()
+        return print("transaction logged")
+    elif isbuy == False:
+        transactiontype= 'sell'
+        quantity = body.get('quantity')
+        Inst_table = Stock_Transactions(uid=uid, symbol=symbol,transaction_type=transactiontype, quantity=quantity, transaction_amount=transactionamount)
+        print(Inst_table)
+        Inst_table.create()   
+        db.session.commit()
+        return print("transaction logged")
+    else:
+        return {'message': f'no buy boolean'}, 400
+def currentprice(body):
+    symbol = body.get('symbol')
+    currentstockmoney = Stocks.query.filter(Stocks._symbol == symbol).value(Stocks._sheesh)
+    return Stocks.query.filter(Stocks._symbol == symbol).value(Stocks._sheesh)  
     
     
 

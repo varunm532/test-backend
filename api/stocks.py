@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_restful import Api, Resource # used for REST API building
 from datetime import datetime
 #from auth_middleware import token_required
-from model.users import User, Stocks, Stock_Transactions, NewTransactractionlog
+from model.users import User, Stocks, Stock_Transactions, NewTransactractionlog, currentprice
 from sqlalchemy import func, case, select
 #from auth_middleware1 import token_required1
 import sqlite3
@@ -142,7 +142,6 @@ class StocksAPI(Resource):
             uid = body.get('uid')
             symbol = body.get('symbol')
             newquantity = body.get('newquantity')
-            transactiontype= 'buy'            
             ## update for stocks table to change the amound of stocks left
             stocks = Stocks.query.all()
             json_ready = [stock.read() for stock in stocks]
@@ -156,8 +155,8 @@ class StocksAPI(Resource):
             
             print(usermoney)
           
-            currentstockmoney = Stocks.query.filter(Stocks._symbol == symbol).value(Stocks._sheesh)
-            print(currentstockmoney)
+            currentstockmoney = currentprice(body)
+            print("this is current money" + str(currentstockmoney))
             if (usermoney > currentstockmoney*quantitytobuy):
                 ## updates stock quantity in stocks table
                 tableid = list1[0]['quantity']
@@ -176,7 +175,8 @@ class StocksAPI(Resource):
                 ## creates log for transaction
                 transactionamount = (currentstockmoney*quantitytobuy)
                 db.session.commit()
-                NewTransactractionlog(body,transactionamount)
+                isbuy = True
+                NewTransactractionlog(body,transactionamount,isbuy)
 
             else:
                 return jsonify({'error': 'Insufficient funds'}), 400
@@ -327,17 +327,18 @@ class StocksAPI(Resource):
             #logic for selling stock
             if (ownedstock >= quantity):
                 #logic for transaction log
-                sellquantity = -quantity
                 stocks = Stocks.query.all()
                 json_ready = [stock.read() for stock in stocks]
                 list1 = [item for item in json_ready if item.get('symbol') == symbol]
-                currentprice = list1[0]['sheesh']
-                transactionamount = currentprice*quantity
-                Inst_table = Stock_Transactions(uid=uid, symbol=symbol,transaction_type=transactiontype, quantity=quantity, transaction_amount=transactionamount)
-                print(Inst_table)
-                Inst_table.create()   
-                db.session.commit()
+                currentpricee = currentprice(body)
+                transactionamount = currentpricee*quantity
+                #Inst_table = Stock_Transactions(uid=uid, symbol=symbol,transaction_type=transactiontype, quantity=quantity, transaction_amount=transactionamount)
+                #print(Inst_table)
+                #Inst_table.create()   
+                #db.session.commit()
                 #logic for updating money in user table
+                isbuy = False
+                NewTransactractionlog(body,transactionamount,isbuy)
                 users = User.query.all()
                 json_ready = [user.read() for user in users]
                 list2 = [item for item in json_ready if item.get('uid') == uid]
