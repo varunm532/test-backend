@@ -2,7 +2,7 @@ from random import randrange
 from datetime import date
 import os, base64
 import json
-
+from sqlalchemy import func, case, select
 from __init__ import app, db
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -709,8 +709,7 @@ def NewTransactractionlog(body,transactionamount,isbuy):
 def currentprice(body):
     symbol = body.get('symbol')
     return Stocks.query.filter(Stocks._symbol == symbol).value(Stocks._sheesh)
-def updatemoney(body,newbal,isbuy):
-    if isbuy == True:
+def updatemoney(body,newbal):
         uid = body.get('uid')
         userid = User.query.filter(User._uid == uid).value(User.id)
         x = User.query.get(userid)
@@ -718,11 +717,6 @@ def updatemoney(body,newbal,isbuy):
         x.stockmoney = newbal
         db.session.commit()
         return print("account balance updated")
-        
-    elif isbuy == False:
-        2
-    else:
-        return {'message': f'no buy boolean'},400
 def newquantity(body,isbuy):
     if isbuy == True:
         newquantity = body.get('newquantity')
@@ -734,11 +728,35 @@ def newquantity(body,isbuy):
         return print("updated quanity")
     elif isbuy == False:
         symbol = body.get('symbol')
+        quantity = body.get('quantity')
+        totalquant = Stocks.query.filter(Stocks._symbol == symbol).value(Stocks._quantity)
+        newquantity = totalquant + quantity
+        idnum = Stocks.query.filter(Stocks._symbol==symbol).value(Stocks.id)
+        x= Stocks.query.get(idnum)
+        print("this is x" + str(x))
+        x.update(quantity = newquantity)
+        return print("updated quanity")
     else:
         return {'message': f'no buy boolean'},400
 def usermoney(body):
     uid = body.get('uid')
     return User.query.filter(User._uid == uid).value(User._stockmoney)
+def numstockowned(body):
+    symbol = body.get('symbol')
+    uid = body.get('uid')
+    result = db.session.query(
+                Stock_Transactions._symbol.label("SYMBOL"),
+                (func.sum(case([(Stock_Transactions._transaction_type == 'buy', Stock_Transactions._quantity)], else_=0)) -
+                func.sum(case([(Stock_Transactions._transaction_type == 'sell', Stock_Transactions._quantity)], else_=0))
+                ).label("TOTAL_QNTY"),
+                (func.sum(Stock_Transactions._quantity * Stocks._sheesh)).label("VALUE"),
+            ).join(Stocks, Stocks._symbol == Stock_Transactions._symbol) \
+    .filter(Stock_Transactions._uid == uid, Stock_Transactions._symbol == symbol) \
+    .group_by(Stock_Transactions._symbol) \
+    .all()
+    print(result[0][1])
+    ownedstock = result[0][1]
+    return ownedstock
     
     
 
