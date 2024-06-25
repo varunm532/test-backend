@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_restful import Api, Resource # used for REST API building
 from datetime import datetime
 #from auth_middleware import token_required
-from model.users import User, Stocks, Stock_Transactions, NewTransactractionlog, currentprice
+from model.users import User, Stocks, Stock_Transactions, NewTransactractionlog, currentprice, usermoney, newquantity, updatemoney
 from sqlalchemy import func, case, select
 #from auth_middleware1 import token_required1
 import sqlite3
@@ -49,7 +49,7 @@ class StocksAPI(Resource):
                         # Use .get() to avoid KeyError
                         if latest_price is not None:
                             stock.sheesh = latest_price
-                            stock.quantity =latest_quantity
+                            #stock.quantity =latest_quantity
                             db.session.commit()
                             print(f"Updated price for {symbol} to {latest_price}")
                         else:
@@ -134,52 +134,77 @@ class StocksAPI(Resource):
             json_ready = [transactions.read() for transactions in transaction]
             return jsonify(json_ready)
     
-    class _Transaction2(Resource):
-        ## updated 
+    ##class _Transaction2(Resource):
+    ##    ## old code: still working 
+    ##    def post(self):
+    ##        body = request.get_json()
+    ##        quantitytobuy = body.get('buyquantity')
+    ##        uid = body.get('uid')
+    ##        isbuy = True
+    ##        symbol = body.get('symbol')
+    ##        newquantity = body.get('newquantity')
+    ##        ## update for stocks table to change the amound of stocks left
+    ##        stocks = Stocks.query.all()
+    ##        json_ready = [stock.read() for stock in stocks]
+    ##        list1 = [item for item in json_ready if item.get('symbol') == symbol]
+    ##       
+    ##        user_ids = User.query.filter(User._uid == uid).value(User.id)
+    ##      
+    ##        print(user_ids)
+    ##       
+    ##        usermoney = User.query.filter(User._uid == uid).value(User._stockmoney)
+    ##        
+    ##        print(usermoney)
+    ##      
+    ##        currentstockmoney = currentprice(body)
+    ##        print("this is current money" + str(currentstockmoney))
+    ##        if (usermoney > currentstockmoney*quantitytobuy):
+    ##            ## updates stock quantity in stocks table
+    ##            tableid = list1[0]['quantity']
+    ##            #print(tableid)
+    ##            tableid = list1[0]['id']
+    ##            print("this is tableid" + str(tableid))
+    ##            tableid = Stocks.query.get(tableid)
+    ##            print("this is tableid" + str(tableid))
+    ##            tableid.update(quantity=newquantity )
+    ##            db.session.commit()
+    ##            ## updates user money
+    ##            updatedusermoney = usermoney - (currentstockmoney*quantitytobuy)
+    ##            print(updatedusermoney)
+    ##            tableid_user = User.query.get(user_ids)
+    ##            print(tableid_user)
+    ##            tableid_user.stockmoney = updatedusermoney
+    ##            db.session.commit()
+    ##            ## creates log for transaction
+    ##            transactionamount = (currentstockmoney*quantitytobuy)
+    ##            db.session.commit()
+    ##            
+    ##            NewTransactractionlog(body,transactionamount,isbuy)
+##
+    ##        else:
+    ##            return jsonify({'error': 'Insufficient funds'}), 400
+    class _Transaction3(Resource):
         def post(self):
             body = request.get_json()
             quantitytobuy = body.get('buyquantity')
-            uid = body.get('uid')
-            symbol = body.get('symbol')
-            newquantity = body.get('newquantity')
-            ## update for stocks table to change the amound of stocks left
-            stocks = Stocks.query.all()
-            json_ready = [stock.read() for stock in stocks]
-            list1 = [item for item in json_ready if item.get('symbol') == symbol]
-           
-            user_ids = User.query.filter(User._uid == uid).value(User.id)
-          
-            print(user_ids)
-           
-            usermoney = User.query.filter(User._uid == uid).value(User._stockmoney)
-            
-            print(usermoney)
-          
+            isbuy = True
+            # Current price of stock
             currentstockmoney = currentprice(body)
-            print("this is current money" + str(currentstockmoney))
-            if (usermoney > currentstockmoney*quantitytobuy):
-                ## updates stock quantity in stocks table
-                tableid = list1[0]['quantity']
-                print(tableid)
-                tableid = list1[0]['id']
-                tableid = Stocks.query.get(tableid)
-                tableid.update(quantity=newquantity )
-                db.session.commit()
-                ## updates user money
-                updatedusermoney = usermoney - (currentstockmoney*quantitytobuy)
-                print(updatedusermoney)
-                tableid_user = User.query.get(user_ids)
-                print(tableid_user)
-                tableid_user.stockmoney = updatedusermoney
-                db.session.commit()
-                ## creates log for transaction
+            # Amount of money user has
+            userbal = usermoney(body)
+            if (userbal >= currentstockmoney*quantitytobuy):
+                # Cretes a log for transaction
                 transactionamount = (currentstockmoney*quantitytobuy)
-                db.session.commit()
-                isbuy = True
-                NewTransactractionlog(body,transactionamount,isbuy)
-
+                NewTransactractionlog(body,transactionamount, isbuy)
+                # Updates stock quantity in stock table
+                newquantity(body,isbuy)
+                # Updates user money
+                newbal = userbal - (currentstockmoney*quantitytobuy)
+                updatemoney(body,newbal,isbuy)
             else:
                 return jsonify({'error': 'Insufficient funds'}), 400
+            
+                        
                 
             
     class _Transactionsdisplayuser(Resource):
@@ -197,18 +222,23 @@ class StocksAPI(Resource):
             print("test")
             print(json_ready)
             return jsonify(filtered_transactions)
-    class _Stockmoney(Resource):
+    ##class _Stockmoney(Resource):
+        ## old code still working
+    ##    def post(self):
+    ##        body = request.get_json()
+    ##        uid = body.get('uid')
+    ##        print (uid)
+    ##        users = User.query.all()
+    ##        json_ready = [user.read() for user in users]
+    ##    # Filter transactions based on uid
+    ##        filtered_transactions = [item for item in json_ready if item.get('uid') == uid]
+    ##        print("test")
+    ##        print(filtered_transactions[0]['stockmoney'])
+    ##        return jsonify(filtered_transactions[0]['stockmoney'])
+    class _Stockmoney1(Resource):
         def post(self):
             body = request.get_json()
-            uid = body.get('uid')
-            print (uid)
-            users = User.query.all()
-            json_ready = [user.read() for user in users]
-        # Filter transactions based on uid
-            filtered_transactions = [item for item in json_ready if item.get('uid') == uid]
-            print("test")
-            print(filtered_transactions[0]['stockmoney'])
-            return jsonify(filtered_transactions[0]['stockmoney'])
+            return jsonify(usermoney(body))
     class _Portfolio2(Resource):
         def post(self):
             body = request.get_json()
@@ -335,7 +365,7 @@ class StocksAPI(Resource):
                 #Inst_table = Stock_Transactions(uid=uid, symbol=symbol,transaction_type=transactiontype, quantity=quantity, transaction_amount=transactionamount)
                 #print(Inst_table)
                 #Inst_table.create()   
-                #db.session.commit()
+                #db.session.commit()o-=  hc
                 #logic for updating money in user table
                 isbuy = False
                 NewTransactractionlog(body,transactionamount,isbuy)
@@ -361,6 +391,9 @@ class StocksAPI(Resource):
                 return {'message': 'Stock sold successfully'}, 200
             else:
                 return {'message': 'Insufficient stock quantity to sell'}, 400
+    class _SellStock(Resource):
+        def post(self):
+            
     class _Owned(Resource):
         def post(self):
             body = request.get_json()
@@ -412,8 +445,8 @@ class StocksAPI(Resource):
     api.add_resource(_Displaystock, '/stock/display')
     api.add_resource(_Transactionsdisplay, '/transaction/displayadmin')
     api.add_resource(_Transactionsdisplayuser, '/transaction/display')
-    api.add_resource(_Transaction2, '/transaction')
-    api.add_resource(_Stockmoney, '/stockmoney')
+    api.add_resource(_Transaction3, '/transaction')
+    api.add_resource(_Stockmoney1, '/stockmoney')
     api.add_resource(_Portfolio2, '/portfolio')
     api.add_resource(_SellStock, '/sell')
     api.add_resource(_Owned, '/owned')

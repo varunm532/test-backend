@@ -334,7 +334,7 @@ class Stocks(db.Model):
            # self.sheesh = sheesh
         if len(company) > 0:
             self.company = company
-        if quantity is not None:
+        if quantity is not None and isinstance(quantity, int) and quantity > 0:
             self.quantity = quantity
         
         db.session.commit()
@@ -664,7 +664,7 @@ class User(db.Model):
 
     # CRUD update: updates user name, password, phone
     # returns self
-    def update(self, name="", uid="", password="", pnum="", stockmoney=""):
+    def update(self, name="", uid="", password="", pnum="", stockmoney=None):
         """only updates values with length"""
         if len(name) > 0:
             self.name = name
@@ -674,7 +674,7 @@ class User(db.Model):
             self.set_password(password)
         if len(pnum) > 0:
             self.pnum = pnum
-        if stockmoney == '':
+        if stockmoney is not None and isinstance(stockmoney, int) and stockmoney > 0:
             self.stockmoney = stockmoney
         db.session.commit()
         return self
@@ -708,8 +708,37 @@ def NewTransactractionlog(body,transactionamount,isbuy):
         return {'message': f'no buy boolean'}, 400
 def currentprice(body):
     symbol = body.get('symbol')
-    currentstockmoney = Stocks.query.filter(Stocks._symbol == symbol).value(Stocks._sheesh)
-    return Stocks.query.filter(Stocks._symbol == symbol).value(Stocks._sheesh)  
+    return Stocks.query.filter(Stocks._symbol == symbol).value(Stocks._sheesh)
+def updatemoney(body,newbal,isbuy):
+    if isbuy == True:
+        uid = body.get('uid')
+        userid = User.query.filter(User._uid == uid).value(User.id)
+        x = User.query.get(userid)
+        print("this is second x" + str(x))
+        x.stockmoney = newbal
+        db.session.commit()
+        return print("account balance updated")
+        
+    elif isbuy == False:
+        2
+    else:
+        return {'message': f'no buy boolean'},400
+def newquantity(body,isbuy):
+    if isbuy == True:
+        newquantity = body.get('newquantity')
+        symbol = body.get('symbol')
+        idnum = Stocks.query.filter(Stocks._symbol==symbol).value(Stocks.id)
+        x= Stocks.query.get(idnum)
+        print("this is x" + str(x))
+        x.update(quantity = newquantity)
+        return print("updated quanity")
+    elif isbuy == False:
+        symbol = body.get('symbol')
+    else:
+        return {'message': f'no buy boolean'},400
+def usermoney(body):
+    uid = body.get('uid')
+    return User.query.filter(User._uid == uid).value(User._stockmoney)
     
     
 
