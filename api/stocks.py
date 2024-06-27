@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_restful import Api, Resource # used for REST API building
 from datetime import datetime
 #from auth_middleware import token_required
-from model.users import User, Stocks, Stock_Transactions, NewTransactractionlog, currentprice, usermoney, newquantity, updatemoney, numstockowned
+from model.users import User, Stocks, Stock_Transactions, NewTransactractionlog, currentprice, usermoney, newquantity, updatemoney, numstockowned, display,updatestockprice
 from sqlalchemy import func, case, select
 #from auth_middleware1 import token_required1
 import sqlite3
@@ -29,7 +29,8 @@ class StocksAPI(Resource):
         
         def get(self):
             #updates stock price:
-            stocks = Stocks.query.offset(0).limit(26).all()
+            topstock = True
+            stocks = updatestockprice(topstock=topstock)
             print(stocks)
             api_key = 'OyGEcU5tCO127eOKHqoraOGY0TNAwlFS'  # Replace with your FMP API key
             #F2RXN9arcI1Yyh0CSkmHGarjMIpfZ2ow
@@ -48,9 +49,7 @@ class StocksAPI(Resource):
                         latest_quantity = data[0].get('marketCap')
                         # Use .get() to avoid KeyError
                         if latest_price is not None:
-                            stock.sheesh = latest_price
-                            #stock.quantity =latest_quantity
-                            db.session.commit()
+                            updatestockprice(isloop = True,latest_price= latest_price,stock=stock)
                             print(f"Updated price for {symbol} to {latest_price}")
                         else:
                             print(f"Price data not found for {symbol}")
@@ -66,7 +65,8 @@ class StocksAPI(Resource):
         def post(self):
             body = request.get_json()
             print(body)
-            stocks = Stocks.query.all()
+            isloop = False
+            stocks = updatestockprice(body,isloop) 
             returnlist = []
             newlist = []
             json_ready = [stock.read() for stock in stocks]
@@ -85,20 +85,59 @@ class StocksAPI(Resource):
             print("this is new list" + str(newlist))
             data = jsonify(newlist)
             return data
+    ##class _Singleupdata0(Resource):
+    ##    # works old
+    ##    def post(self):
+    ##        #updates stock price:
+    ##        body = request.get_json()
+    ##        symbol = body.get("symbol")
+    ##        print("this is body: " + str(symbol))
+    ##        api_key = 'xAxPbodLC12nNCwa5gHiK6YZVQecllPA'  # Replace with your FMP API key
+    ##        url = f'https://financialmodelingprep.com/api/v3/quote/{symbol}?apikey={api_key}'
+    ##        stocks = Stocks.query.all()
+    ##        response = requests.get(url)
+    ##        json_ready = [stock.read() for stock in stocks]
+    ##        print("this is jsonready:" + str(json_ready))
+    ##        list1 = [item for item in json_ready if item.get('symbol') == symbol]
+    ##        print(str(list1))
+    ##        for stock in stocks:
+    ##            if stock.symbol == symbol:
+    ##                
+    ##                if response.status_code == 200:
+    ##                    data = response.json()
+    ##                    
+    ##                    if data:  # Check if the list is not empty
+    ##                        latest_price = data[0].get('price')
+    ##                        latest_quantity = data[0].get('marketCap')
+    ##                        # Use .get() to avoid KeyError
+    ##                        if latest_price is not None:
+    ##                            print("this is stock:" + str(stock))
+    ##                            stock.sheesh = latest_price
+    ##                            price = stock.sheesh
+    ##                            #stock.quantity =latest_quantity
+    ##                            db.session.commit()
+    ##                            print(f"Updated price for {symbol} to {latest_price}")
+    ##                        else:
+    ##                            print(f"Price data not found for {symbol}")
+    ##                    else:
+    ##                        print(f"Empty data for {symbol}")
+    ##                else:
+    ##                    print(f"Failed to fetch data for {symbol}. Status code: {response.status_code}")
+    ##                newprice = list1[0]["sheesh"]
+    ##                print("this is new price" +  str(price))
+    ##                data = jsonify(str(price))
+    ##                print("this is data" + str(data))
+    ##        return data 
     class _Singleupdata(Resource):
         def post(self):
             #updates stock price:
             body = request.get_json()
             symbol = body.get("symbol")
-            print("this is body: " + str(symbol))
+            isloop = False
             api_key = 'xAxPbodLC12nNCwa5gHiK6YZVQecllPA'  # Replace with your FMP API key
             url = f'https://financialmodelingprep.com/api/v3/quote/{symbol}?apikey={api_key}'
-            stocks = Stocks.query.all()
+            stocks = updatestockprice(body,isloop)
             response = requests.get(url)
-            json_ready = [stock.read() for stock in stocks]
-            print("this is jsonready:" + str(json_ready))
-            list1 = [item for item in json_ready if item.get('symbol') == symbol]
-            print(str(list1))
             for stock in stocks:
                 if stock.symbol == symbol:
                     
@@ -107,13 +146,11 @@ class StocksAPI(Resource):
                         
                         if data:  # Check if the list is not empty
                             latest_price = data[0].get('price')
-                            latest_quantity = data[0].get('marketCap')
                             # Use .get() to avoid KeyError
                             if latest_price is not None:
-                                stock.sheesh = latest_price
-                                price = stock.sheesh
-                                stock.quantity =latest_quantity
-                                db.session.commit()
+                                print("this is stock:" + str(stock))
+                                isloop = True
+                                price = updatestockprice(body,isloop,latest_price,stock)
                                 print(f"Updated price for {symbol} to {latest_price}")
                             else:
                                 print(f"Price data not found for {symbol}")
@@ -121,18 +158,18 @@ class StocksAPI(Resource):
                             print(f"Empty data for {symbol}")
                     else:
                         print(f"Failed to fetch data for {symbol}. Status code: {response.status_code}")
-                    newprice = list1[0]["sheesh"]
                     print("this is new price" +  str(price))
                     data = jsonify(str(price))
                     print("this is data" + str(data))
-            return data            
-    class _Transactionsdisplay(Resource):
-        #@token_required1("Admin")
-        
-        def get(self):
-            transaction = Stock_Transactions.query.all()
-            json_ready = [transactions.read() for transactions in transaction]
-            return jsonify(json_ready)
+            return data           
+    ##class _Transactionsdisplay(Resource):
+    ## not using
+    ##    #@token_required1("Admin")
+    ##    
+    ##    def get(self):
+    ##        transaction = Stock_Transactions.query.all()
+    ##        json_ready = [transactions.read() for transactions in transaction]
+    ##        return jsonify(json_ready)
     
     ##class _Transaction2(Resource):
     ##    ## old code: still working 
@@ -207,21 +244,27 @@ class StocksAPI(Resource):
                         
                 
             
+    ##class _Transactionsdisplayuser0(Resource):
+    ##    # old sttill works
+    ##    def post(self):
+    ##        body = request.get_json()
+    ##        uid = body.get('uid')
+    ##        print(uid)
+    ##        # Save uid as an instance variable to access it in other methods
+    ##        self.uid = uid
+    ##        transactions = Stock_Transactions.query.all()
+    ##        json_ready = [transaction.read() for transaction in transactions]
+    ##        
+    ##        # Filter transactions based on uid
+    ##        filtered_transactions = [item for item in json_ready if item.get('uid') == uid]
+    ##        print("test")
+    ##        print(json_ready)
+    ##        return jsonify(filtered_transactions)
     class _Transactionsdisplayuser(Resource):
         def post(self):
-            body = request.get_json()
-            uid = body.get('uid')
-            print(uid)
-            # Save uid as an instance variable to access it in other methods
-            self.uid = uid
-            transactions = Stock_Transactions.query.all()
-            json_ready = [transaction.read() for transaction in transactions]
-            
-            # Filter transactions based on uid
-            filtered_transactions = [item for item in json_ready if item.get('uid') == uid]
-            print("test")
-            print(json_ready)
-            return jsonify(filtered_transactions)
+            body= request.get_json()
+            data = display(body)
+            return jsonify(data)
     ##class _Stockmoney(Resource):
         ## old code still working
     ##    def post(self):
@@ -466,7 +509,7 @@ class StocksAPI(Resource):
             
         
     api.add_resource(_Displaystock, '/stock/display')
-    api.add_resource(_Transactionsdisplay, '/transaction/displayadmin')
+    ##api.add_resource(_Transactionsdisplay, '/transaction/displayadmin')
     api.add_resource(_Transactionsdisplayuser, '/transaction/display')
     api.add_resource(_Transaction3, '/transaction')
     api.add_resource(_Stockmoney1, '/stockmoney')

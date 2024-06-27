@@ -757,7 +757,24 @@ def numstockowned(body):
     print(result[0][1])
     ownedstock = result[0][1]
     return ownedstock
-    
+def display(body):
+    uid = body.get('uid')
+    data = Stock_Transactions.query.filter(Stock_Transactions._uid == uid)
+    print("this is data" +str(data))
+    json_ready = [data.read() for data in data]
+    print("this is data" +str(json_ready))
+    return json_ready
+def updatestockprice(body = None,isloop = None,latest_price = None,stock = None, topstock = None):
+    #symbol = body.get('symbol')
+    if topstock == True:
+        return Stocks.query.offset(0).limit(26).all()
+    if isloop == False:
+        return Stocks.query.all()
+    elif isloop == True:
+        stock.sheesh = latest_price
+        price = stock.sheesh
+        db.session.commit()
+        return price
     
 
 
