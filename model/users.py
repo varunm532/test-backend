@@ -686,9 +686,11 @@ class User(db.Model):
         db.session.commit()
         return None
 def NewTransactractionlog(body,transactionamount,isbuy):
+    # creates transaction log
     quantitytobuy = body.get('buyquantity')
     uid = body.get('uid')
     symbol = body.get('symbol')
+    # checks if it is a log for buy
     if isbuy == True:
         transactiontype= 'buy'
         Inst_table = Stock_Transactions(uid=uid, symbol=symbol,transaction_type=transactiontype, quantity=quantitytobuy, transaction_amount=transactionamount)
@@ -696,6 +698,7 @@ def NewTransactractionlog(body,transactionamount,isbuy):
         Inst_table.create()   
         db.session.commit()
         return print("transaction logged")
+    # checks if it is a log for sell
     elif isbuy == False:
         transactiontype= 'sell'
         quantity = body.get('quantity')
@@ -706,10 +709,25 @@ def NewTransactractionlog(body,transactionamount,isbuy):
         return print("transaction logged")
     else:
         return {'message': f'no buy boolean'}, 400
-def currentprice(body):
-    symbol = body.get('symbol')
-    return Stocks.query.filter(Stocks._symbol == symbol).value(Stocks._sheesh)
+def currentprice(body, currentsymbol=None):
+    # Gets current price of stock from db
+    try:
+        symbol = body.get('symbol')
+        if symbol:
+            result = Stocks.query.filter(Stocks._symbol == symbol).value(Stocks._sheesh)
+            if result is not None:
+                return result
+        else:
+            raise ValueError("No symbol provided in body")
+    except Exception as e:
+        if not currentsymbol:
+            return {'message': f"Invalid usage of function: {str(e)}"}, 400
+        result = Stocks.query.filter(Stocks._symbol == currentsymbol).value(Stocks._sheesh)
+        if result is not None:
+            return result
+        return {'message': f"Symbol {currentsymbol} not found"}, 404
 def updatemoney(body,newbal):
+    # updates account bal
         uid = body.get('uid')
         userid = User.query.filter(User._uid == uid).value(User.id)
         x = User.query.get(userid)
@@ -718,6 +736,8 @@ def updatemoney(body,newbal):
         db.session.commit()
         return print("account balance updated")
 def newquantity(body,isbuy):
+    # updates stock quantity after purchase
+    # logic for updating quantity incase of buy
     if isbuy == True:
         newquantity = body.get('newquantity')
         symbol = body.get('symbol')
@@ -726,6 +746,7 @@ def newquantity(body,isbuy):
         print("this is x" + str(x))
         x.update(quantity = newquantity)
         return print("updated quanity")
+    # logic for updating quantity incase of sell
     elif isbuy == False:
         symbol = body.get('symbol')
         quantity = body.get('quantity')
@@ -739,33 +760,64 @@ def newquantity(body,isbuy):
     else:
         return {'message': f'no buy boolean'},400
 def usermoney(body):
+    # Gets account balance
     uid = body.get('uid')
     return User.query.filter(User._uid == uid).value(User._stockmoney)
-def numstockowned(body):
-    symbol = body.get('symbol')
+def numstockowned(body,for_portfolio = None,symbol = None):
+    # calculates the amount of stocks owned
     uid = body.get('uid')
-    result = db.session.query(
-                Stock_Transactions._symbol.label("SYMBOL"),
-                (func.sum(case([(Stock_Transactions._transaction_type == 'buy', Stock_Transactions._quantity)], else_=0)) -
-                func.sum(case([(Stock_Transactions._transaction_type == 'sell', Stock_Transactions._quantity)], else_=0))
-                ).label("TOTAL_QNTY"),
-                (func.sum(Stock_Transactions._quantity * Stocks._sheesh)).label("VALUE"),
-            ).join(Stocks, Stocks._symbol == Stock_Transactions._symbol) \
-    .filter(Stock_Transactions._uid == uid, Stock_Transactions._symbol == symbol) \
-    .group_by(Stock_Transactions._symbol) \
-    .all()
-    print(result[0][1])
-    ownedstock = result[0][1]
-    return ownedstock
-def display(body):
+    if for_portfolio == None:
+        symbol = body.get('symbol')
+        
+        result = db.session.query(
+                    Stock_Transactions._symbol.label("SYMBOL"),
+                    (func.sum(case([(Stock_Transactions._transaction_type == 'buy', Stock_Transactions._quantity)], else_=0)) -
+                    func.sum(case([(Stock_Transactions._transaction_type == 'sell', Stock_Transactions._quantity)], else_=0))
+                    ).label("TOTAL_QNTY"),
+                    (func.sum(Stock_Transactions._quantity * Stocks._sheesh)).label("VALUE"),
+                ).join(Stocks, Stocks._symbol == Stock_Transactions._symbol) \
+        .filter(Stock_Transactions._uid == uid, Stock_Transactions._symbol == symbol) \
+        .group_by(Stock_Transactions._symbol) \
+        .all()
+        #print(result[0][1])
+        ownedstock = result[0][1]
+        return ownedstock
+    else:
+        symbol = symbol
+        result = db.session.query(
+                    Stock_Transactions._symbol.label("SYMBOL"),
+                    (func.sum(case([(Stock_Transactions._transaction_type == 'buy', Stock_Transactions._quantity)], else_=0)) -
+                    func.sum(case([(Stock_Transactions._transaction_type == 'sell', Stock_Transactions._quantity)], else_=0))
+                    ).label("TOTAL_QNTY"),
+                    (func.sum(Stock_Transactions._quantity * Stocks._sheesh)).label("VALUE"),
+                ).join(Stocks, Stocks._symbol == Stock_Transactions._symbol) \
+        .filter(Stock_Transactions._uid == uid, Stock_Transactions._symbol == symbol) \
+        .group_by(Stock_Transactions._symbol) \
+        .all()
+        #print(result[0][1])
+        ownedstock = result[0][1]
+        return ownedstock
+        
+def display(body,for_portfolio = None):
     uid = body.get('uid')
-    data = Stock_Transactions.query.filter(Stock_Transactions._uid == uid)
-    print("this is data" +str(data))
-    json_ready = [data.read() for data in data]
-    print("this is data" +str(json_ready))
-    return json_ready
+    if for_portfolio == None:
+        # Displays a transactions made by user
+        
+        data = Stock_Transactions.query.filter(Stock_Transactions._uid == uid)
+        print("this is data" +str(data))
+        json_ready = [data.read() for data in data]
+        print("this is data" +str(json_ready))
+        return json_ready
+    else:
+        list1 = Stock_Transactions.query.filter(Stock_Transactions._uid == uid).distinct(Stock_Transactions._symbol).all()
+        symbols_list = list(set(row._symbol for row in list1))
+        # Extracting _symbol values from the query result
+        
+        #print(str(listofstock))
+        return symbols_list
 def updatestockprice(body = None,isloop = None,latest_price = None,stock = None, topstock = None):
     #symbol = body.get('symbol')
+    # updates stock price 
     if topstock == True:
         return Stocks.query.offset(0).limit(26).all()
     if isloop == False:

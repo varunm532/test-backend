@@ -285,95 +285,118 @@ class StocksAPI(Resource):
     class _Portfolio2(Resource):
         def post(self):
             body = request.get_json()
-            uid = body.get('uid')
-            list1 = Stock_Transactions.query.filter(Stock_Transactions._uid == uid).distinct(Stock_Transactions._symbol).all()
-
-               # Extracting _symbol values from the query result
-            symbols_list = list(set(row._symbol for row in list1))
-            print("this is list:")
-            print(symbols_list)
+            for_portfolio = True
+            symbol_list = display(body,for_portfolio)
             i = 0
             portfolio_data = []
-            for i in symbols_list:
-                #print(i)
-                # to find # of stock bought
-                buyquantity = (
-                    db.session.query(
-                        Stock_Transactions._symbol,
-                        func.sum(Stock_Transactions._quantity).label("total_quantity")
-                    )
-                    .filter(Stock_Transactions._uid == uid, Stock_Transactions._symbol == i, Stock_Transactions._transaction_type == 'buy')
-                    .group_by(Stock_Transactions._symbol)
-                    .all()
-                )
-                quantitybuy= buyquantity[0][1]
-                # to find stocks sold
-                sellquantity = (
-                    db.session.query(
-                        Stock_Transactions._symbol,
-                        func.sum(Stock_Transactions._quantity).label("total_quantity")
-                    )
-                    .filter(Stock_Transactions._uid == uid, Stock_Transactions._symbol == i,Stock_Transactions._transaction_type == 'sell' )
-                    .group_by(Stock_Transactions._symbol)
-                    .all()
-                )
-                #print("this is sellquantity")
-                value = 0
-                #checks if the is a sell
-                if not sellquantity:
-                    totalstock = quantitybuy
-                    if totalstock == 0:
-                        pass
-                    else:
-                        print("symbol:")
-                        print(i)
-                        print("this is quantity:")
-                        print(quantitybuy)
-                        stockprice = Stocks.query.filter(Stocks._symbol == i).value(Stocks._sheesh)
-                        value = totalstock*stockprice
-                        print("this is value:")
-                        print(value)
-                        payload = {
-                            "SYMBOL": i,
-                            "TOTAL_QNTY": totalstock,
-                            "VALUE": value
-                        }
-                        #for i in symbols_list
-                        
-                        portfolio_data.append(payload)      
-                        print("this is portfolio_data:")
-                        print(portfolio_data)   
+            for i in symbol_list:
+                totalquantity = numstockowned(body,for_portfolio,i)
+                if totalquantity == 0:
+                    pass
                 else:
-                    quantitysell = sellquantity[0][1]
-                    totalstock = quantitybuy -quantitysell
-                    if totalstock == 0:
-                        pass
-                    else:
-                        
-                        #    print(sellquantity)
-                        #value
-                        #print("total quantity:")
-                        #print(totalstock)
-                        stockprice = Stocks.query.filter(Stocks._symbol == i).value(Stocks._sheesh)
-                        value = totalstock*stockprice
-                        print("this is symbol")
-                        print(i)
-                        print("this is quantity")
-                        print(totalstock)
-                        print("this is value")
-                        print(value)
-                        payload = {
+                    currentstockprice = currentprice(body,i)
+                    value = currentstockprice * totalquantity
+                    payload = {
                             "SYMBOL": i,
-                            "TOTAL_QNTY": totalstock,
+                            "TOTAL_QNTY": totalquantity,
                             "VALUE": value
                         }
-                        
-                        #for i in symbols_list
-                        
-                        portfolio_data.append(payload)      
-                        print("this is portfolio_data:")
-                        print(portfolio_data)
+                    portfolio_data.append(payload)
             return {"portfolio": portfolio_data}, 200
+                    
+            
+            
+    ##class _Portfolio3(Resource):
+    ### old working code
+    ##    def post(self):
+    ##        body = request.get_json()
+    ##        uid = body.get('uid')
+    ##        
+    ##        symbols_list = display(body,for_portfolio= True)
+    ##        print("this is list:")
+    ##        print(symbols_list)
+    ##        i = 0
+    ##        portfolio_data = []
+    ##        for i in symbols_list:
+    ##            #print(i)
+    ##            # to find # of stock bought
+    ##            buyquantity = (
+    ##                db.session.query(
+    ##                    Stock_Transactions._symbol,
+    ##                    func.sum(Stock_Transactions._quantity).label("total_quantity")
+    ##                )
+    ##                .filter(Stock_Transactions._uid == uid, Stock_Transactions._symbol == i, Stock_Transactions._transaction_type == 'buy')
+    ##                .group_by(Stock_Transactions._symbol)
+    ##                .all()
+    ##            )
+    ##            quantitybuy= buyquantity[0][1]
+    ##            # to find stocks sold
+    ##            sellquantity = (
+    ##                db.session.query(
+    ##                    Stock_Transactions._symbol,
+    ##                    func.sum(Stock_Transactions._quantity).label("total_quantity")
+    ##                )
+    ##                .filter(Stock_Transactions._uid == uid, Stock_Transactions._symbol == i,Stock_Transactions._transaction_type == 'sell' )
+    ##                .group_by(Stock_Transactions._symbol)
+    ##                .all()
+    ##            )
+    ##            #print("this is sellquantity")
+    ##            value = 0
+    ##            #checks if the is a sell
+    ##            if not sellquantity:
+    ##                totalstock = quantitybuy
+    ##                if totalstock == 0:
+    ##                    pass
+    ##                else:
+    ##                    print("symbol:")
+    ##                    print(i)
+    ##                    print("this is quantity:")
+    ##                    print(quantitybuy)
+    ##                    stockprice = Stocks.query.filter(Stocks._symbol == i).value(Stocks._sheesh)
+    ##                    value = totalstock*stockprice
+    ##                    print("this is value:")
+    ##                    print(value)
+    ##                    payload = {
+    ##                        "SYMBOL": i,
+    ##                        "TOTAL_QNTY": totalstock,
+    ##                        "VALUE": value
+    ##                    }
+    ##                    #for i in symbols_list
+    ##                    
+    ##                    portfolio_data.append(payload)      
+    ##                    print("this is portfolio_data:")
+    ##                    print(portfolio_data)   
+    ##            else:
+    ##                quantitysell = sellquantity[0][1]
+    ##                totalstock = quantitybuy -quantitysell
+    ##                if totalstock == 0:
+    ##                    pass
+    ##                else:
+    ##                    
+    ##                    #    print(sellquantity)
+    ##                    #value
+    ##                    #print("total quantity:")
+    ##                    #print(totalstock)
+    ##                    stockprice = Stocks.query.filter(Stocks._symbol == i).value(Stocks._sheesh)
+    ##                    value = totalstock*stockprice
+    ##                    print("this is symbol")
+    ##                    print(i)
+    ##                    print("this is quantity")
+    ##                    print(totalstock)
+    ##                    print("this is value")
+    ##                    print(value)
+    ##                    payload = {
+    ##                        "SYMBOL": i,
+    ##                        "TOTAL_QNTY": totalstock,
+    ##                        "VALUE": value
+    ##                    }
+    ##                    
+    ##                    #for i in symbols_list
+    ##                    
+    ##                    portfolio_data.append(payload)      
+    ##                    print("this is portfolio_data:")
+    ##                    print(portfolio_data)
+    ##        return {"portfolio": portfolio_data}, 200
     ##class _SellStock(Resource):
     ##    # old still work
     ##    def post(self):
