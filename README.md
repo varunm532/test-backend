@@ -18,6 +18,9 @@
           - code to display all transactions of user (data from db)
           - code to update single stock
           - code to display sorted stocks based on sector
+  - model/users.py:
+      - Contains all code to initilize db tables
+      - contains all db changes which are utilized in api/stock.py
   - api/stocksort.py:
       - Code to recieve input from user about sectore selection
       - calls sorting program in model/stockfilter.py
