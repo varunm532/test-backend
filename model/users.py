@@ -712,6 +712,7 @@ def NewTransactractionlog(body,transactionamount,isbuy):
 def currentprice(body, currentsymbol=None):
     # Gets current price of stock from db
     try:
+        # Used for buy/sell classes
         symbol = body.get('symbol')
         if symbol:
             result = Stocks.query.filter(Stocks._symbol == symbol).value(Stocks._sheesh)
@@ -720,6 +721,7 @@ def currentprice(body, currentsymbol=None):
         else:
             raise ValueError("No symbol provided in body")
     except Exception as e:
+        # used for portfolio class
         if not currentsymbol:
             return {'message': f"Invalid usage of function: {str(e)}"}, 400
         result = Stocks.query.filter(Stocks._symbol == currentsymbol).value(Stocks._sheesh)
@@ -766,6 +768,7 @@ def usermoney(body):
 def numstockowned(body,for_portfolio = None,symbol = None):
     # calculates the amount of stocks owned
     uid = body.get('uid')
+    # used for sell class
     if for_portfolio == None:
         symbol = body.get('symbol')
         
@@ -783,7 +786,7 @@ def numstockowned(body,for_portfolio = None,symbol = None):
         ownedstock = result[0][1]
         return ownedstock
     else:
-        symbol = symbol
+        # used for portfolio class
         result = db.session.query(
                     Stock_Transactions._symbol.label("SYMBOL"),
                     (func.sum(case([(Stock_Transactions._transaction_type == 'buy', Stock_Transactions._quantity)], else_=0)) -
@@ -798,23 +801,28 @@ def numstockowned(body,for_portfolio = None,symbol = None):
         ownedstock = result[0][1]
         return ownedstock
         
-def display(body,for_portfolio = None):
-    uid = body.get('uid')
-    if for_portfolio == None:
+def display(body= None,for_portfolio = None,display= None):
+    
+    if for_portfolio == None and display == None:
         # Displays a transactions made by user
-        
+        uid = body.get('uid')
         data = Stock_Transactions.query.filter(Stock_Transactions._uid == uid)
         print("this is data" +str(data))
         json_ready = [data.read() for data in data]
         print("this is data" +str(json_ready))
         return json_ready
-    else:
+    elif for_portfolio == True:
+        # used inpart display and calculate data about stocks owned in portfolio class
+        uid = body.get('uid')
         list1 = Stock_Transactions.query.filter(Stock_Transactions._uid == uid).distinct(Stock_Transactions._symbol).all()
         symbols_list = list(set(row._symbol for row in list1))
         # Extracting _symbol values from the query result
         
         #print(str(listofstock))
         return symbols_list
+    else:
+        # used to display stocks
+        return [stock.read() for stock in display]
 def updatestockprice(body = None,isloop = None,latest_price = None,stock = None, topstock = None):
     #symbol = body.get('symbol')
     # updates stock price 
@@ -827,6 +835,20 @@ def updatestockprice(body = None,isloop = None,latest_price = None,stock = None,
         price = stock.sheesh
         db.session.commit()
         return price
+def querytables(body,type,table):
+    if table == Stocks:
+        
+            #sym = body.get('symbol')
+            return Stocks.query.filter_by(_symbol=type).all()
+        
+    else:
+        if type == '_uid':
+            uid = body.get('uid')
+            return Stock_Transactions.query.filter_by(_uid=uid).all()
+        else:
+            return {'message': f'invalid type for table'},400
+        
+    
     
 
 

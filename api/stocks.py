@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_restful import Api, Resource # used for REST API building
 from datetime import datetime
 #from auth_middleware import token_required
-from model.users import User, Stocks, Stock_Transactions, NewTransactractionlog, currentprice, usermoney, newquantity, updatemoney, numstockowned, display,updatestockprice
+from model.users import User, Stocks, Stock_Transactions, NewTransactractionlog, currentprice, usermoney, newquantity, updatemoney, numstockowned, display,updatestockprice,querytables
 from sqlalchemy import func, case, select
 #from auth_middleware1 import token_required1
 import sqlite3
@@ -58,31 +58,31 @@ class StocksAPI(Resource):
                 else:
                     print(f"Failed to fetch data for {symbol}. Status code: {response.status_code}")                          
             #displays database data:
-            json_ready = [stock.read() for stock in stocks]
+            json_ready = display(display=stocks)
             print("this is " + str(json_ready))
             return jsonify(json_ready)
     class _Sortdisplay(Resource):
         def post(self):
             body = request.get_json()
-            print(body)
+            #print(body)
             isloop = False
             stocks = updatestockprice(body,isloop) 
             returnlist = []
             newlist = []
-            json_ready = [stock.read() for stock in stocks]
+            json_ready = display(display=stocks)
             for stock in body:
                 sym = stock[0]
-                print("this is symbol" + sym)
-                transaction = Stocks.query.filter_by(_symbol=sym).all()
-                print("this is transacotin: " + str(transaction))
+                #print("this is symbol" + sym)
+                transaction = querytables(body,type= sym,table=Stocks)
+                #print("this is transacotin: " + str(transaction))
                 returnlist.append(transaction)
-            print("this is list: " + str(returnlist))
+            #print("this is list: " + str(returnlist))
             for i in returnlist:
-                json_ready = [stock.read() for stock in i]
-                print("this is json" + str(json_ready[0]))
+                json_ready = display(display=i)
+                #print("this is json" + str(json_ready[0]))
                 new_json_ready = json_ready[0]
                 newlist.append(new_json_ready)
-            print("this is new list" + str(newlist))
+            #print("this is new list" + str(newlist))
             data = jsonify(newlist)
             return data
     ##class _Singleupdata0(Resource):
@@ -488,7 +488,7 @@ class StocksAPI(Resource):
             body = request.get_json()
             uid = body.get("uid")
             listdata = [[0,1000]]
-            transaction = Stock_Transactions.query.filter_by(_uid=uid).all()
+            transaction = querytables(body,type= '_uid',table=Stock_Transactions)
             #sortedtransactio = transaction[0]
             #print("this is transactionx:"+str(sortedtransactio.uid))
             #print("this is transactiony:"+str(sortedtransactio.transaction_type))
@@ -500,21 +500,19 @@ class StocksAPI(Resource):
                 ##transactionamount = transaction[y]
                 transactionmoney = i.transaction_amount
 
-                print("this is transactiamount" + str(transactionmoney))
+                
                 if str(i.transaction_type) == "buy":
-                    print("this is transaction type:"+str(i.transaction_type))
+                    
                     totalamount = totalamount - transactionmoney
                     print("this is totalamount:" + str(totalamount))
                     list1 = [x,totalamount]
                     listdata.append(list1)
                 if str(i.transaction_type) == "sell":
                     totalamount = totalamount + transactionmoney
-                    print("this is transaction type:"+str(i.transaction_type))
-                    print("this is totalamount:" + str(totalamount))
+                    
                     list1 = [x,totalamount]
                     listdata.append(list1)
                 x += 1
-                print(listdata)
             data = jsonify(listdata)
             return data
 
