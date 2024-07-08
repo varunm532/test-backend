@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_restful import Api, Resource # used for REST API building
 from datetime import datetime
 #from auth_middleware import token_required
-from model.users import User, Stocks, Stock_Transactions, NewTransactractionlog, currentprice, usermoney, newquantity, updatemoney, numstockowned, display,updatestockprice,querytables
+from model.users import User, Stocks, Stock_Transactions, NewTransactractionlog, currentprice, usermoney, newquantity, updatemoney, numstockowned, filterdb,updatestockprice,querytables
 from sqlalchemy import func, case, select
 #from auth_middleware1 import token_required1
 import sqlite3
@@ -58,8 +58,8 @@ class StocksAPI(Resource):
                 else:
                     print(f"Failed to fetch data for {symbol}. Status code: {response.status_code}")                          
             #displays database data:
-            json_ready = display(display=stocks)
-            print("this is " + str(json_ready))
+            json_ready = filterdb(display=stocks)
+            #print("this is " + str(json_ready))
             return jsonify(json_ready)
     class _Sortdisplay(Resource):
         def post(self):
@@ -69,7 +69,7 @@ class StocksAPI(Resource):
             stocks = updatestockprice(body,isloop) 
             returnlist = []
             newlist = []
-            json_ready = display(display=stocks)
+            json_ready = filterdb(display=stocks)
             for stock in body:
                 sym = stock[0]
                 #print("this is symbol" + sym)
@@ -78,7 +78,7 @@ class StocksAPI(Resource):
                 returnlist.append(transaction)
             #print("this is list: " + str(returnlist))
             for i in returnlist:
-                json_ready = display(display=i)
+                json_ready = filterdb(display=i)
                 #print("this is json" + str(json_ready[0]))
                 new_json_ready = json_ready[0]
                 newlist.append(new_json_ready)
@@ -263,7 +263,7 @@ class StocksAPI(Resource):
     class _Transactionsdisplayuser(Resource):
         def post(self):
             body= request.get_json()
-            data = display(body)
+            data = filterdb(body)
             return jsonify(data)
     ##class _Stockmoney(Resource):
         ## old code still working
@@ -286,7 +286,7 @@ class StocksAPI(Resource):
         def post(self):
             body = request.get_json()
             for_portfolio = True
-            symbol_list = display(body,for_portfolio)
+            symbol_list = filterdb(body,for_portfolio)
             i = 0
             portfolio_data = []
             for i in symbol_list:

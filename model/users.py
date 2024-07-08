@@ -801,7 +801,7 @@ def numstockowned(body,for_portfolio = None,symbol = None):
         ownedstock = result[0][1]
         return ownedstock
         
-def display(body= None,for_portfolio = None,display= None):
+def filterdb(body= None,for_portfolio = None,display= None):
     
     if for_portfolio == None and display == None:
         # Displays a transactions made by user
